@@ -1,66 +1,84 @@
-## Foundry
+# Gas Price Dynamic Fees Hook
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+A Uniswap V4 hook that dynamically adjusts pool fees based on the current gas price relative to a moving average. This hook incentivizes trading during high gas price periods and discourages trading during low gas price periods.
 
-Foundry consists of:
+## Overview
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+The Gas Price Dynamic Fees Hook implements a dynamic fee mechanism for Uniswap V4 pools that adjusts the pool's fee based on the current gas price. The hook maintains a moving average of gas prices and adjusts the pool fee according to the following rules:
 
-## Documentation
+- If current gas price > 110% of moving average: Fee is halved (0.25%)
+- If current gas price < 90% of moving average: Fee is doubled (1%)
+- Otherwise: Base fee is used (0.5%)
 
-https://book.getfoundry.sh/
+This mechanism aims to:
+1. Incentivize trading during high gas price periods by reducing fees
+2. Discourage trading during low gas price periods by increasing fees
+3. Maintain normal fees during stable gas price periods
+
+## Features
+
+- Dynamic fee adjustment based on gas prices
+- Moving average calculation of gas prices
+- Integration with Uniswap V4's hook system
+- Automatic fee updates on each swap
+
+## Technical Details
+
+### Base Fee
+- Default base fee: 0.5% (5000 basis points)
+
+### Fee Adjustment Thresholds
+- High gas price threshold: 110% of moving average
+- Low gas price threshold: 90% of moving average
+
+### Moving Average Calculation
+The hook maintains a moving average of gas prices using the formula:
+```
+New Average = ((Old Average * # of txns tracked) + Current gas price) / (# of txns tracked + 1)
+```
 
 ## Usage
 
-### Build
+1. Deploy the hook with a Uniswap V4 Pool Manager
+2. Initialize a pool with the dynamic fee flag enabled
+3. The hook will automatically adjust fees based on gas prices
 
-```shell
-$ forge build
+### Example
+
+```solidity
+// Deploy the hook
+GasPriceFeesHook hook = new GasPriceFeesHook(poolManager);
+
+// Initialize pool with dynamic fee flag
+PoolKey memory key = PoolKey({
+    currency0: currency0,
+    currency1: currency1,
+    fee: LPFeeLibrary.DYNAMIC_FEE_FLAG,
+    tickSpacing: 60,
+    hooks: IHooks(address(hook))
+});
+
+// The hook will automatically adjust fees on swaps
 ```
 
-### Test
+## Testing
 
-```shell
-$ forge test
+The project includes comprehensive tests that verify:
+- Fee adjustments at different gas price levels
+- Moving average calculations
+- Integration with Uniswap V4's swap mechanism
+
+Run tests using:
+```bash
+forge test
 ```
 
-### Format
+## Dependencies
 
-```shell
-$ forge fmt
-```
+- Uniswap V4 Core
+- Uniswap V4 Periphery
+- OpenZeppelin Contracts
 
-### Gas Snapshots
+## License
 
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+MIT License
