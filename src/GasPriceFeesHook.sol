@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.26;
+pragma solidity ^0.8.0;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {BaseHook} from "v4-periphery/src/utils/BaseHook.sol";
@@ -14,7 +14,7 @@ import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 contract GasPriceFeesHook is BaseHook {
     using LPFeeLibrary for uint24;
 
-    uint256 public movingAverageGasPrice;
+    uint128 public movingAverageGasPrice;
 
     uint104 public movingAverageGasPriceCount;
 
@@ -35,7 +35,7 @@ contract GasPriceFeesHook is BaseHook {
             beforeRemoveLiquidity: false,
             afterRemoveLiquidity: false,
             beforeSwap: true,
-            afterSwap: false,
+            afterSwap: true,
             beforeDonate: false,
             afterDonate: false,
             beforeSwapReturnDelta: false,
@@ -63,13 +63,11 @@ contract GasPriceFeesHook is BaseHook {
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, feeWithFlag);
     }
 
-    function _afterSwap(
-        address,
-        PoolKey calldata,
-        SwapParams calldata,
-        BalanceDelta,
-        bytes calldata
-    ) internal override returns (bytes4, int128) {
+    function _afterSwap(address, PoolKey calldata, SwapParams calldata, BalanceDelta, bytes calldata)
+        internal
+        override
+        returns (bytes4, int128)
+    {
         _updateMovingAverage();
         return (this.afterSwap.selector, 0);
     }
@@ -92,7 +90,7 @@ contract GasPriceFeesHook is BaseHook {
             return BASE_FEE / 2;
         }
 
-        if (gasPrice > (movingAverageGasPrice * 9 / 10)) {
+        if (gasPrice < (movingAverageGasPrice * 9 / 10)) {
             return BASE_FEE * 2;
         }
 
